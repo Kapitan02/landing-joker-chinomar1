@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mega King – Bono Exclusivo</title>
+  <title>Bono Exclusivo</title>
 
   <!-- META PIXEL FACEBOOK -->
   <script>
@@ -53,22 +53,23 @@
       background: #ff0000;
       color: white;
       font-weight: bold;
-      padding: 8px 18px;
+      padding: 10px 24px;
       border-radius: 30px;
       transform: rotate(10deg);
-      font-size: 0.9rem;
+      font-size: 1rem;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      z-index: 10;
     }
 
     .logo {
-      width: 280px;
+      width: 300px;
       max-width: 85vw;
       margin-bottom: 30px;
       filter: drop-shadow(0 0 15px #ffcc00);
       animation: zoomIn 1s ease forwards;
       opacity: 0;
       transform: scale(0.8);
-      margin-top: -20px;
+      margin-top: -10px;
     }
 
     @keyframes zoomIn {
@@ -79,16 +80,15 @@
     }
 
     .vip {
-      font-size: 1.8rem;
+      font-size: 2rem;
       font-weight: 900;
       color: #ffffff;
-      transform: rotate(0deg);
       text-shadow: 2px 2px 5px rgba(0,0,0,0.7);
       margin-bottom: 15px;
     }
 
     .bono {
-      font-size: 2.6rem;
+      font-size: 2.8rem;
       font-weight: 900;
       color: #ffcc00;
       transform: rotate(-3deg);
@@ -97,40 +97,37 @@
     }
 
     .retiros {
-      font-size: 1.6rem;
+      font-size: 1.8rem;
       font-weight: 700;
       color: #00ff88;
-      transform: rotate(0deg);
       text-shadow: 2px 2px 5px rgba(0,0,0,0.6);
       margin-bottom: 15px;
     }
 
     .instrucciones {
-      font-size: 1.6rem;
+      font-size: 1.8rem;
       font-weight: 900;
       color: #ffffff;
-      transform: rotate(0deg);
       text-shadow: 2px 2px 5px rgba(0,0,0,0.7);
-      margin-bottom: 20px;
+      margin-bottom: 30px;
     }
 
     .btn-whatsapp {
       display: inline-block;
       background: #25d366;
       color: white;
-      padding: 14px 30px;
-      font-size: 1.4rem;
-      font-weight: 700;
+      padding: 24px 50px;
+      font-size: 2.2rem;
+      font-weight: 900;
       text-decoration: none;
       border-radius: 50px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
       transition: transform 0.2s ease-in-out;
-      position: static;
-      animation: float 2s ease-in-out infinite;
+      animation: float 2.5s ease-in-out infinite;
     }
 
     .btn-whatsapp:hover {
-      transform: scale(1.05);
+      transform: scale(1.08);
     }
 
     @keyframes float {
@@ -139,15 +136,14 @@
       100% { transform: translateY(0); }
     }
 
-    /* CELULARES */
+    /* CELULAR */
     @media (max-width: 600px) {
       body {
-        padding-bottom: 135px;
+        padding-bottom: 100px;
       }
 
       .logo {
         width: 260px;
-        margin-top: -10px;
       }
 
       .vip, .bono, .retiros, .instrucciones {
@@ -166,31 +162,31 @@
       }
     }
 
-    /* ESCRITORIO */
+    /* COMPUTADORA - MODO GIGANTE */
     @media (min-width: 601px) {
       .logo {
-        width: 460px;
+        width: 520px;
       }
 
       .vip {
-        font-size: 2.6rem;
+        font-size: 3.2rem;
       }
 
       .bono {
-        font-size: 3.6rem;
+        font-size: 4rem;
       }
 
       .retiros {
-        font-size: 2.4rem;
+        font-size: 2.8rem;
       }
 
       .instrucciones {
-        font-size: 2.4rem;
+        font-size: 2.6rem;
       }
 
       .btn-whatsapp {
-        font-size: 2rem;
-        padding: 20px 40px;
+        font-size: 3rem;
+        padding: 28px 60px;
       }
     }
   </style>
