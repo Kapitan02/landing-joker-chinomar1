@@ -4,6 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mega King – Bono Exclusivo</title>
+
+  <!-- META PIXEL FACEBOOK -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '685686570899136');
+    fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=685686570899136&ev=PageView&noscript=1"
+  /></noscript>
+  <!-- END META PIXEL -->
+
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * {
@@ -106,6 +125,7 @@
       border-radius: 50px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
       transition: transform 0.2s ease-in-out;
+      position: static;
     }
 
     .btn-whatsapp:hover {
@@ -114,7 +134,7 @@
 
     @media (max-width: 600px) {
       .logo {
-        width: 140px;
+        width: 260px;
         margin-top: -10px;
       }
 
@@ -137,6 +157,15 @@
         font-size: 1.4rem;
         transform: rotate(0deg);
       }
+
+      .btn-whatsapp {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 16px 36px;
+        font-size: 1.4rem;
+        z-index: 999;
+      }
     }
   </style>
 </head>
@@ -144,7 +173,7 @@
 
   <div class="oferta">¡OFERTA POR TIEMPO LIMITADO!</div>
 
-  <img class="logo" src="img/joker.png"
+  <img class="logo" src="img/joker.png" alt="Payaso Joker’s Jewels">
 
   <div class="vip">ACCESO VIP EXCLUSIVO</div>
   <div class="bono">¡SUPER BONO EN TU PRIMER DEPOSITO!</div>
