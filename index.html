@@ -61,7 +61,7 @@
     }
 
     .logo {
-      width: 380px;
+      width: 280px;
       max-width: 85vw;
       margin-bottom: 30px;
       filter: drop-shadow(0 0 15px #ffcc00);
@@ -79,7 +79,7 @@
     }
 
     .vip {
-      font-size: 2.4rem;
+      font-size: 1.8rem;
       font-weight: 900;
       color: #ffffff;
       transform: rotate(0deg);
@@ -88,7 +88,7 @@
     }
 
     .bono {
-      font-size: 3.5rem;
+      font-size: 2.6rem;
       font-weight: 900;
       color: #ffcc00;
       transform: rotate(-3deg);
@@ -97,7 +97,7 @@
     }
 
     .retiros {
-      font-size: 2rem;
+      font-size: 1.6rem;
       font-weight: 700;
       color: #00ff88;
       transform: rotate(0deg);
@@ -106,7 +106,7 @@
     }
 
     .instrucciones {
-      font-size: 2.4rem;
+      font-size: 1.6rem;
       font-weight: 900;
       color: #ffffff;
       transform: rotate(0deg);
@@ -114,18 +114,12 @@
       margin-bottom: 20px;
     }
 
-    @keyframes float {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-6px); }
-      100% { transform: translateY(0px); }
-    }
-
     .btn-whatsapp {
       display: inline-block;
       background: #25d366;
       color: white;
       padding: 14px 30px;
-      font-size: 1.2rem;
+      font-size: 1.4rem;
       font-weight: 700;
       text-decoration: none;
       border-radius: 50px;
@@ -139,6 +133,13 @@
       transform: scale(1.05);
     }
 
+    @keyframes float {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+      100% { transform: translateY(0); }
+    }
+
+    /* CELULARES */
     @media (max-width: 600px) {
       body {
         padding-bottom: 135px;
@@ -149,22 +150,7 @@
         margin-top: -10px;
       }
 
-      .vip {
-        font-size: 1.6rem;
-        transform: rotate(0deg);
-      }
-
-      .bono {
-        font-size: 2.4rem;
-        transform: rotate(0deg);
-      }
-
-      .retiros {
-        font-size: 1.4rem;
-        transform: rotate(0deg);
-      }
-
-      .instrucciones {
+      .vip, .bono, .retiros, .instrucciones {
         font-size: 1.4rem;
         transform: rotate(0deg);
       }
@@ -177,6 +163,34 @@
         font-size: 1.4rem;
         z-index: 999;
         animation: none;
+      }
+    }
+
+    /* ESCRITORIO */
+    @media (min-width: 601px) {
+      .logo {
+        width: 460px;
+      }
+
+      .vip {
+        font-size: 2.6rem;
+      }
+
+      .bono {
+        font-size: 3.6rem;
+      }
+
+      .retiros {
+        font-size: 2.4rem;
+      }
+
+      .instrucciones {
+        font-size: 2.4rem;
+      }
+
+      .btn-whatsapp {
+        font-size: 2rem;
+        padding: 20px 40px;
       }
     }
   </style>
