@@ -71,7 +71,7 @@
     .gate button{
       width:100%; margin-top:10px; padding:12px 14px; border:1px solid rgba(255,255,255,.12); border-radius:10px;
       background:#121212; color:#bfbfbf; font-weight:800; cursor:not-allowed; opacity:.7;
-      transition:opacity .2s ease, box-shadow .2s ease, transform .1s ease, background .2s ease, color .2s ease, border-color .2s ease;
+      transition:opacity .2s ease, box-shadow .2s ease, transform .1s ease, background .2s ease, color .1s ease, border-color .2s ease;
     }
     .gate button.enabled{ cursor:pointer; opacity:1; }
 
@@ -204,7 +204,6 @@
     // Detectores simples de entorno
     var UA = navigator.userAgent || "";
     var isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(UA);
-    var isIOS = /iPhone|iPad|iPod/i.test(UA);
     var isDesktop = !isMobile;
 
     // Construye el texto limpio del mensaje
@@ -226,8 +225,6 @@
     // Abridor inteligente de WhatsApp
     function openWhatsAppSmart(text){
       var urls = waURLs(text);
-      // Evento de retorno si vuelve sin escribir (hasta 90s)
-      scheduleReturnCheck();
 
       // Dispara el evento del Pixel con eventID + UTMs
       try {
@@ -248,13 +245,12 @@
       if(isDesktop){
         window.open(urls.web, '_blank', 'noopener');
       } else {
-        // En móvil intentamos la app primero (iOS/Android)
+        // En móvil intentamos la app primero y, si no, caemos a api/wa
         var opened = false;
         try {
           var appWin = window.open(urls.app, '_blank', 'noopener');
           opened = !!appWin;
         } catch(e){}
-        // Fallback rápido a api/wa si la app no abrió
         setTimeout(function(){
           if(!opened){
             window.open(urls.api, '_blank', 'noopener') || window.open(urls.wa, '_blank', 'noopener');
@@ -286,8 +282,9 @@
       btn.classList.toggle('enabled', ok);
     }
 
-    // Click en "Continuar": muestra botón WA con URL prearmada (pero la apertura final será "smart")
+    // Click en "Continuar": muestra botón WA y prearma href
     $('#continuar').addEventListener('click', function(){
+      // Track del gate pasado con eventID (deduplicación con CAPI)
       try {
         window.__gateEventID = genEventID('gate');
         if(window.fbq) fbq('trackCustom','GatePassed',{
@@ -312,42 +309,8 @@
       openWhatsAppSmart(text);
     });
 
-    // ====== Opcional: detectar regreso sin mensaje (para retargeting) ======
-    var returnTimer = null, clickedTs = 0, returned = false;
-    function scheduleReturnCheck(){
-      clickedTs = Date.now();
-      returned = false;
-      // Si vuelve en menos de 90s, disparamos WhatsAppReturn
-      var maxMs = 90000;
-      // Listener de visibilidad
-      document.addEventListener('visibilitychange', onVisChange, { once:false });
-      // “kill switch” por si no vuelve
-      returnTimer = setTimeout(function(){
-        cleanupReturnCheck();
-      }, maxMs + 2000);
-    }
-    function onVisChange(){
-      if(document.visibilityState === 'visible' && !returned){
-        var delta = Date.now() - clickedTs;
-        if(delta > 2000 && delta < 90000){
-          returned = true;
-          try {
-            if(window.fbq) fbq('trackCustom','WhatsAppReturn', {
-              juego: selected || '',
-              since_click_ms: delta
-            });
-          } catch(e){}
-        }
-        cleanupReturnCheck();
-      }
-    }
-    function cleanupReturnCheck(){
-      if(returnTimer){ clearTimeout(returnTimer); returnTimer = null; }
-      document.removeEventListener('visibilitychange', onVisChange);
-    }
-    // ====== Fin opcional ======
-
   })();
   </script>
 </body>
 </html>
+
