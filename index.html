@@ -154,9 +154,9 @@
 
   <script>
   (function(){
-    // === CONFIGURACIÓN: dos links w.app (reemplazar estos valores) ==========
+    // === CONFIGURACIÓN: dos links w.app =====================================
     var DESTINOS = [
-      { type: 'link', value: 'https://w.app/ip4avm', label: 'agente_1' }
+      { type: 'link', value: 'https://w.app/ip4avm', label: 'agente_1' },
       { type: 'link', value: 'https://w.app/ipv4m2', label: 'agente_2' }
     ];
 
@@ -167,8 +167,8 @@
     // hash DJB2 para asignación determinística
     function djb2(str){
       var h = 5381, i = str.length;
-      while(i){ h = ((h << 5) + h) ^ str.charCodeAt(--i); } // xor variant
-      return h >>> 0; // unsigned
+      while(i){ h = ((h << 5) + h) ^ str.charCodeAt(--i); }
+      return h >>> 0;
     }
     function chooseByHash(seed, arrLen){
       var h = djb2(seed);
@@ -190,11 +190,11 @@
       }catch(e){ return false; }
     }
 
-    // Selección robusta: fbclid → determinístico; si no, RR (LS→cookie) → azar
+    // Selección robusta: fbclid → determinístico; si no, RR (LS→cookie)
     function pickDestino(){
       var len = DESTINOS.length;
 
-      // 1) Si hay fbclid (o parámetro manual wa_split), uso hash determinístico
+      // 1) Si hay fbclid/gclid (o parámetro manual wa_split), uso hash
       var seed = qs.get('wa_split') || qs.get('fbclid') || qs.get('gclid') || '';
       if(seed){
         return DESTINOS[ chooseByHash(seed, len) ];
@@ -209,7 +209,7 @@
       var next = ((idx + 1) % len).toString();
       if(!lsSet(key, next)) cookieSet(key, next, 30);
 
-      // 3) Fallback: 50/50 aleatorio si algo raro pasa
+      // 3) Fallback: 50/50 aleatorio
       return d || DESTINOS[Math.floor(Math.random()*len)];
     }
 
@@ -220,11 +220,6 @@
         : ('id_' + Date.now() + '_' + Math.random().toString(36).slice(2,10));
       return (prefix ? prefix + '_' : '') + core;
     }
-
-    // Entorno (por si más adelante necesitás abrir app/wa para teléfonos)
-    var UA = navigator.userAgent || "";
-    var isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(UA);
-    var isDesktop = !isMobile;
 
     // === GATE ================================================================
     var selected = null;
@@ -258,7 +253,7 @@
       btn.scrollIntoView({ behavior:'smooth', block:'center' });
 
       var destino = pickDestino();
-      btn.href = destino.value; // preview
+      btn.href = destino.value; // preview del destino
     });
 
     // Click real → abrir destino y trackear elección
@@ -268,7 +263,8 @@
 
       try {
         var seed = qs.get('wa_split') || qs.get('fbclid') || qs.get('gclid') || '';
-        var method = seed ? 'hash' : (lsGet ? 'rr' : 'random');
+        var hasSeed = !!seed;
+        var method = hasSeed ? 'hash' : (cookieGet('__wa_rr_idx__') !== null ? 'rr' : 'random');
         window.__waEventID = genEventID('wa');
         if(window.fbq) fbq('trackCustom','WhatsAppClick', {
           juego: selected || '',
