@@ -147,143 +147,82 @@
     <div class="disclaimer">Juego para mayores de 18. Jugar con responsabilidad.</div>
   </div>
 
-  <!-- BOTÓN WHATSAPP (fallback si no hay auto-redirect) -->
+  <!-- BOTÓN WHATSAPP (se muestra después del gate) -->
   <a id="wa-btn" class="btn-whatsapp" href="#" target="_blank" rel="noopener">
     💬 OBTENER MI BONO AHORA
   </a>
 
   <script>
   (function(){
-    // ========= CONFIG =========
-    var AGENTES = [
-      { label: 'agente_1', phone: '5491157468638', weight: 1 },
-      { label: 'agente_2', phone: '5492236327810', weight: 1 },
-      { label: 'agente_3', phone: '5491157686506', weight: 1 }
+    // === CONFIGURACIÓN: tres links w.app ====================================
+    var DESTINOS = [
+      { type: 'link', value: 'https://w.app/ch1', label: 'agente_1' },
+      { type: 'link', value: 'https://w.app/ch2', label: 'agente_2' },
+      { type: 'link', value: 'https://w.app/ch3', label: 'agente_3' }
     ];
-    var SETTINGS = {
-      AUTO_REDIRECT: true,
-      REDIRECT_DELAY_MS: 150,
-      DONT_REDIRECT_PARAM: 'no_redirect', // ?no_redirect=1
-      DEDUP_KEY: '__auto_redirect_once__',
-      DEDUP_TTL_MIN: 10,
-      // === MENSAJE PERSONALIZADO POR DEFECTO ===
-      DEFAULT_TEXT: 'Hola!! Quiero obtener mi b0no del 50%.'
-    };
 
-    // ========= HELPERS =========
+    // === HELPERS =============================================================
     var $ = s => document.querySelector(s);
     var qs = new URLSearchParams(location.search);
-    var UA = navigator.userAgent || '';
-    var isAndroid = /Android/i.test(UA);
-    var isIOS = /iPhone|iPad|iPod/i.test(UA);
-    var isDesktop = !isAndroid && !isIOS;
 
-    function normPhone(p){
-      return (p||'').replace(/[^\d]/g,''); // solo dígitos
-    }
+    // hash DJB2 para asignación determinística
     function djb2(str){
-      var h=5381,i=str.length; while(i){ h=((h<<5)+h)^str.charCodeAt(--i); } return h>>>0;
+      var h = 5381, i = str.length;
+      while(i){ h = ((h << 5) + h) ^ str.charCodeAt(--i); }
+      return h >>> 0;
     }
-    function chooseByHash(seed, arrLen){ return djb2(seed) % arrLen; }
-    function weightedPick(items){
-      var total = items.reduce((a,b)=>a+(b.weight||1),0);
-      var r = Math.random()*total, acc=0;
-      for(var i=0;i<items.length;i++){ acc += (items[i].weight||1); if(r<acc) return items[i]; }
-      return items[items.length-1];
+    function chooseByHash(seed, arrLen){
+      var h = djb2(seed);
+      return h % arrLen;
     }
-    function lsGet(k){ try{return localStorage.getItem(k);}catch(e){return null;} }
-    function lsSet(k,v){ try{localStorage.setItem(k,v);return true;}catch(e){return false;} }
-    function shouldDedup(){
+
+    // Storage helpers (backup si no hay fbclid)
+    function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+    function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+    function cookieGet(k){
+      var m = document.cookie.split('; ').find(r=>r.startsWith(k+'='));
+      return m ? decodeURIComponent(m.split('=')[1]) : null;
+    }
+    function cookieSet(k,v,days){
       try{
-        var raw = lsGet(SETTINGS.DEDUP_KEY);
-        if(!raw) return false;
-        var t = parseInt(raw,10);
-        return Number.isFinite(t) && (Date.now()-t) < SETTINGS.DEDUP_TTL_MIN*60*1000;
+        var d = new Date(); d.setTime(d.getTime()+days*24*60*60*1000);
+        document.cookie = k+'='+encodeURIComponent(v)+'; expires='+d.toUTCString()+'; path=/; SameSite=Lax';
+        return true;
       }catch(e){ return false; }
     }
-    function markDedup(){ try{ lsSet(SETTINGS.DEDUP_KEY, String(Date.now())); }catch(e){} }
 
-    // Construye texto con UTMs opcionales
-    function buildText(){
-      var base = qs.get('wa_text') || SETTINGS.DEFAULT_TEXT || '';
-      var utm = [];
-      ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid'].forEach(k=>{
-        var v = qs.get(k);
-        if(v) utm.push(k+'='+v);
-      });
-      if(utm.length) base += ' | ' + utm.join('&');
-      return base;
-    }
+    // Selección robusta: fbclid → determinístico; si no, RR (LS→cookie)
+    function pickDestino(){
+      var len = DESTINOS.length;
 
-    // Deep links por plataforma + fallbacks sin intersticial
-    function buildWhatsLinks(phone){
-      var p = normPhone(phone);
-      var text = encodeURIComponent(buildText());
-
-      return {
-        ios: 'whatsapp://send?phone='+p+'&text='+text,
-        androidIntent: 'intent://send/?phone='+p+'&text='+text+'#Intent;scheme=whatsapp;package=com.whatsapp;end',
-        androidScheme: 'whatsapp://send?phone='+p+'&text='+text,
-        webDesktop: 'https://web.whatsapp.com/send?phone='+p+'&text='+text,
-        webApi: 'https://api.whatsapp.com/send?phone='+p+'&text='+text,
-        webWaMe: 'https://wa.me/'+p+'?text='+text
-      };
-    }
-
-    function openDirect(agent, openInNew){
-      var links = buildWhatsLinks(agent.phone);
-      if(isAndroid){
-        try{
-          if(openInNew){ window.open(links.androidIntent,'_self'); } else { location.href = links.androidIntent; }
-          setTimeout(function(){ location.href = links.androidScheme; }, 200);
-          setTimeout(function(){ location.href = links.webApi; }, 600);
-        }catch(e){
-          location.href = links.webApi;
-        }
-      } else if(isIOS){
-        try{
-          if(openInNew){ window.open(links.ios,'_self'); } else { location.href = links.ios; }
-          setTimeout(function(){ location.href = links.webApi; }, 400);
-        }catch(e){
-          location.href = links.webApi;
-        }
-      } else {
-        if(openInNew){ window.open(links.webDesktop,'_self'); } else { location.replace(links.webDesktop); }
-      }
-    }
-
-    function pickAgent(){
+      // 1) Si hay fbclid/gclid (o parámetro manual wa_split), uso hash
       var seed = qs.get('wa_split') || qs.get('fbclid') || qs.get('gclid') || '';
-      if(seed){ return AGENTES[ chooseByHash(seed, AGENTES.length) ]; }
-      return weightedPick(AGENTES);
+      if(seed){
+        return DESTINOS[ chooseByHash(seed, len) ];
+      }
+
+      // 2) Sin seed: Round-robin por navegador (LS→cookie)
+      var key='__wa_rr_idx__';
+      var raw = lsGet(key); if(raw === null) raw = cookieGet(key);
+      var idx = parseInt(raw || '0', 10); if(!Number.isFinite(idx) || idx < 0) idx = 0;
+
+      var d = DESTINOS[idx % len];
+      var next = ((idx + 1) % len).toString();
+      if(!lsSet(key, next)) cookieSet(key, next, 30);
+
+      // 3) Fallback: aleatorio
+      return d || DESTINOS[Math.floor(Math.random()*len)];
     }
 
-    // ========= AUTO-REDIRECT =========
-    (function(){
-      if(!SETTINGS.AUTO_REDIRECT) return;
-      if(qs.has(SETTINGS.DONT_REDIRECT_PARAM)) return;
-      if(shouldDedup()) return;
+    // Pixel helpers
+    function genEventID(prefix){
+      var core = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : ('id_' + Date.now() + '_' + Math.random().toString(36).slice(2,10));
+      return (prefix ? prefix + '_' : '') + core;
+    }
 
-      var agent = pickAgent();
-
-      try{
-        window.__routeEventID = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('id_'+Date.now());
-        if(window.fbq) fbq('trackCustom','AutoRouteDirectWA', {
-          eventID: window.__routeEventID,
-          destino_label: agent.label||'',
-          fbclid: qs.get('fbclid') || '',
-          gclid: qs.get('gclid') || '',
-          utm_source: qs.get('utm_source') || '',
-          utm_medium: qs.get('utm_medium') || '',
-          utm_campaign: qs.get('utm_campaign') || ''
-        });
-      }catch(e){}
-
-      markDedup();
-      setTimeout(function(){ openDirect(agent, false); }, SETTINGS.REDIRECT_DELAY_MS);
-    })();
-
-    // ========= GATE / BOTÓN (fallback si desactivás auto-redirect) =========
+    // === GATE ================================================================
     var selected = null;
     document.querySelectorAll('input[name="juego"]').forEach(r=>{
       r.addEventListener('change', ()=>{
@@ -303,9 +242,10 @@
       btn.classList.toggle('enabled', ok);
     }
 
+    // Mostrar botón y previsualizar href
     $('#continuar').addEventListener('click', function(){
       try {
-        window.__gateEventID = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('id_'+Date.now());
+        window.__gateEventID = genEventID('gate');
         if(window.fbq) fbq('trackCustom','GatePassed',{ juego: selected || '', eventID: window.__gateEventID });
       } catch(e){}
 
@@ -313,11 +253,36 @@
       btn.style.display = 'inline-block';
       btn.scrollIntoView({ behavior:'smooth', block:'center' });
 
-      var agent = pickAgent();
-      btn.onclick = function(e){
-        e.preventDefault();
-        openDirect(agent, true);
-      };
+      var destino = pickDestino();
+      btn.href = destino.value; // preview del destino
+    });
+
+    // Click real → abrir destino y trackear elección
+    $('#wa-btn').addEventListener('click', function(e){
+      e.preventDefault();
+      var destino = pickDestino();
+
+      try {
+        var seed = qs.get('wa_split') || qs.get('fbclid') || qs.get('gclid') || '';
+        var hasSeed = !!seed;
+        var method = hasSeed ? 'hash' : (cookieGet('__wa_rr_idx__') !== null ? 'rr' : 'random');
+        window.__waEventID = genEventID('wa');
+        if(window.fbq) fbq('trackCustom','WhatsAppClick', {
+          juego: selected || '',
+          eventID: window.__waEventID,
+          fbclid: qs.get('fbclid') || '',
+          utm_source: qs.get('utm_source') || '',
+          utm_medium: qs.get('utm_medium') || '',
+          utm_campaign: qs.get('utm_campaign') || '',
+          utm_content: qs.get('utm_content') || '',
+          utm_term: qs.get('utm_term') || '',
+          destino_label: destino.label || '',
+          asignacion: method,
+          seed_preview: (seed||'').slice(0,24)
+        });
+      } catch(e){}
+
+      window.open(destino.value, '_blank', 'noopener');
     });
 
   })();
