@@ -147,25 +147,33 @@
     <div class="disclaimer">Juego para mayores de 18. Jugar con responsabilidad.</div>
   </div>
 
-  <!-- BOTÓN WHATSAPP (se muestra después del gate) -->
+  <!-- BOTÓN WHATSAPP (fallback si no hay auto-redirect) -->
   <a id="wa-btn" class="btn-whatsapp" href="#" target="_blank" rel="noopener">
     💬 OBTENER MI BONO AHORA
   </a>
 
   <script>
   (function(){
-    // === CONFIGURACIÓN: dos links w.app =====================================
+    // === CONFIGURACIÓN DESTINOS =============================================
     var DESTINOS = [
-      { type: 'link', value: 'https://w.app/ipv4m', label: 'agente_1' },
-      { type: 'link', value: 'https://w.app/ip4avm2', label: 'agente_2' }
+      { type: 'link', value: 'https://w.app/ch1', label: 'agente_1', weight: 1 }, // 33%
+      { type: 'link', value: 'https://w.app/ch2', label: 'agente_2', weight: 1 }, // 33%
+      { type: 'link', value: 'https://w.app/ch3', label: 'agente_3', weight: 1 }  // 33%
     ];
 
+    // === TOGGLES =============================================================
+    var SETTINGS = {
+      AUTO_REDIRECT: true,     // poner en false si querés usar el gate y botón
+      REDIRECT_DELAY_MS: 200,  // leve delay para que dispare el Pixel
+      DONT_REDIRECT_PARAM: 'no_redirect', // ?no_redirect=1 para probar sin salto
+      DEDUP_KEY: '__auto_redirect_once__', // evita doble salto en 10 min
+      DEDUP_TTL_MIN: 10
+    };
 
     // === HELPERS =============================================================
     var $ = s => document.querySelector(s);
     var qs = new URLSearchParams(location.search);
 
-    // hash DJB2 para asignación determinística
     function djb2(str){
       var h = 5381, i = str.length;
       while(i){ h = ((h << 5) + h) ^ str.charCodeAt(--i); }
@@ -175,54 +183,85 @@
       var h = djb2(seed);
       return h % arrLen;
     }
-
-    // Storage helpers (backup si no hay fbclid)
+    function weightedPick(items){
+      var total = items.reduce((a,b)=>a + (b.weight||1), 0);
+      var r = Math.random() * total, acc = 0;
+      for(var i=0;i<items.length;i++){
+        acc += (items[i].weight||1);
+        if(r < acc) return items[i];
+      }
+      return items[items.length-1];
+    }
+    function buildUrl(base, extraParams){
+      try{
+        var u = new URL(base);
+        // Merge all current query params (UTMs, fbclid, etc.)
+        for (const [k,v] of qs.entries()){
+          if(!u.searchParams.has(k)) u.searchParams.set(k, v);
+        }
+        // Append extra (like method/label)
+        for (const k in extraParams){
+          if(extraParams[k] !== undefined && extraParams[k] !== null){
+            u.searchParams.set(k, String(extraParams[k]));
+          }
+        }
+        return u.toString();
+      }catch(e){ return base; }
+    }
     function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
     function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
-    function cookieGet(k){
-      var m = document.cookie.split('; ').find(r=>r.startsWith(k+'='));
-      return m ? decodeURIComponent(m.split('=')[1]) : null;
-    }
-    function cookieSet(k,v,days){
+    function shouldDedup(){
       try{
-        var d = new Date(); d.setTime(d.getTime()+days*24*60*60*1000);
-        document.cookie = k+'='+encodeURIComponent(v)+'; expires='+d.toUTCString()+'; path=/; SameSite=Lax';
-        return true;
+        var raw = lsGet(SETTINGS.DEDUP_KEY);
+        if(!raw) return false;
+        var t = parseInt(raw,10);
+        if(!Number.isFinite(t)) return false;
+        return (Date.now() - t) < SETTINGS.DEDUP_TTL_MIN*60*1000;
       }catch(e){ return false; }
     }
+    function markDedup(){
+      try{ lsSet(SETTINGS.DEDUP_KEY, String(Date.now())); }catch(e){}
+    }
 
-    // Selección robusta: fbclid → determinístico; si no, RR (LS→cookie)
+    // Selección: hash estable si hay seed; si no, ponderado
     function pickDestino(){
-      var len = DESTINOS.length;
-
-      // 1) Si hay fbclid/gclid (o parámetro manual wa_split), uso hash
       var seed = qs.get('wa_split') || qs.get('fbclid') || qs.get('gclid') || '';
-      if(seed){
-        return DESTINOS[ chooseByHash(seed, len) ];
-      }
-
-      // 2) Sin seed: Round-robin por navegador (LS→cookie)
-      var key='__wa_rr_idx__';
-      var raw = lsGet(key); if(raw === null) raw = cookieGet(key);
-      var idx = parseInt(raw || '0', 10); if(!Number.isFinite(idx) || idx < 0) idx = 0;
-
-      var d = DESTINOS[idx % len];
-      var next = ((idx + 1) % len).toString();
-      if(!lsSet(key, next)) cookieSet(key, next, 30);
-
-      // 3) Fallback: 50/50 aleatorio
-      return d || DESTINOS[Math.floor(Math.random()*len)];
+      if(seed){ return DESTINOS[ chooseByHash(seed, DESTINOS.length) ]; }
+      return weightedPick(DESTINOS);
     }
 
-    // Pixel helpers
-    function genEventID(prefix){
-      var core = (typeof crypto !== 'undefined' && crypto.randomUUID)
-        ? crypto.randomUUID()
-        : ('id_' + Date.now() + '_' + Math.random().toString(36).slice(2,10));
-      return (prefix ? prefix + '_' : '') + core;
-    }
+    // === AUTO REDIRECT ENTRADA ==============================================
+    (function autoRedirectOnLoad(){
+      if(!SETTINGS.AUTO_REDIRECT) return;
+      if(qs.has(SETTINGS.DONT_REDIRECT_PARAM)) return;
+      if(shouldDedup()) return; // evita loops si el user vuelve atrás
 
-    // === GATE ================================================================
+      var destino = pickDestino();
+
+      // Track de enrutado
+      try{
+        window.__routeEventID = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('id_'+Date.now());
+        if(window.fbq) fbq('trackCustom','AutoRoute', {
+          eventID: window.__routeEventID,
+          destino_label: destino.label || '',
+          fbclid: qs.get('fbclid') || '',
+          gclid: qs.get('gclid') || '',
+          utm_source: qs.get('utm_source') || '',
+          utm_medium: qs.get('utm_medium') || '',
+          utm_campaign: qs.get('utm_campaign') || ''
+        });
+      }catch(e){}
+
+      var url = buildUrl(destino.value, {
+        wa_method: (qs.get('fbclid')||qs.get('gclid')) ? 'hash' : 'weighted',
+        wa_label: destino.label || ''
+      });
+
+      markDedup();
+      setTimeout(function(){ location.replace(url); }, SETTINGS.REDIRECT_DELAY_MS);
+    })();
+
+    // === GATE / BOTÓN (fallback si desactivás auto-redirect) ================
     var selected = null;
     document.querySelectorAll('input[name="juego"]').forEach(r=>{
       r.addEventListener('change', ()=>{
@@ -242,10 +281,9 @@
       btn.classList.toggle('enabled', ok);
     }
 
-    // Mostrar botón y previsualizar href
     $('#continuar').addEventListener('click', function(){
       try {
-        window.__gateEventID = genEventID('gate');
+        window.__gateEventID = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('id_'+Date.now());
         if(window.fbq) fbq('trackCustom','GatePassed',{ juego: selected || '', eventID: window.__gateEventID });
       } catch(e){}
 
@@ -253,36 +291,23 @@
       btn.style.display = 'inline-block';
       btn.scrollIntoView({ behavior:'smooth', block:'center' });
 
-      var destino = pickDestino();
-      btn.href = destino.value; // preview del destino
+      var d = pickDestino();
+      btn.href = buildUrl(d.value, { wa_method: 'button', wa_label: d.label||'' });
     });
 
-    // Click real → abrir destino y trackear elección
     $('#wa-btn').addEventListener('click', function(e){
       e.preventDefault();
-      var destino = pickDestino();
-
+      var d = pickDestino();
+      var url = buildUrl(d.value, { wa_method: 'button_click', wa_label: d.label||'' });
       try {
-        var seed = qs.get('wa_split') || qs.get('fbclid') || qs.get('gclid') || '';
-        var hasSeed = !!seed;
-        var method = hasSeed ? 'hash' : (cookieGet('__wa_rr_idx__') !== null ? 'rr' : 'random');
-        window.__waEventID = genEventID('wa');
+        window.__waEventID = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('id_'+Date.now());
         if(window.fbq) fbq('trackCustom','WhatsAppClick', {
           juego: selected || '',
           eventID: window.__waEventID,
-          fbclid: qs.get('fbclid') || '',
-          utm_source: qs.get('utm_source') || '',
-          utm_medium: qs.get('utm_medium') || '',
-          utm_campaign: qs.get('utm_campaign') || '',
-          utm_content: qs.get('utm_content') || '',
-          utm_term: qs.get('utm_term') || '',
-          destino_label: destino.label || '',
-          asignacion: method,
-          seed_preview: (seed||'').slice(0,24)
+          destino_label: d.label || ''
         });
       } catch(e){}
-
-      window.open(destino.value, '_blank', 'noopener');
+      window.open(url, '_blank', 'noopener');
     });
 
   })();
